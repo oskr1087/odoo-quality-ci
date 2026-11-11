@@ -1,0 +1,122 @@
+name: Reusable Odoo quality
+
+on:
+  workflow_call:
+    inputs:
+      odoo_version:
+        type: string
+        default: "20.0"
+      edition:
+        type: string
+        default: community
+      runtime:
+        type: boolean
+        default: false
+      upgrade:
+        type: boolean
+        default: false
+    secrets:
+      ENTERPRISE_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Shared architecture and security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: project
+      - uses: actions/checkout@v4
+        with:
+          repository: oskr1087/odoo-quality-ci
+          path: engine
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install audit dependencies
+        run: python -m pip install "ruff==0.14.3"
+      - name: Run shared checks against calling repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p project/scripts project/audit-report
+          cp engine/scripts/{full_audit,architecture_audit,security_audit}.py project/scripts/
+          cd project
+          python scripts/full_audit.py --output audit-report
+          python scripts/architecture_audit.py --output audit-report/architecture.json
+          python scripts/security_audit.py --output audit-report/security.json
+      - name: Publish summaries
+        if: always()
+        shell: bash
+        run: |
+          for file in project/audit-report/{summary,architecture-summary,security-summary}.md; do
+            if [ -f "$file" ]; then cat "$file" >> "$GITHUB_STEP_SUMMARY"; fi
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-odoo-quality-report
+          path: project/audit-report/
+          if-no-files-found: warn
+
+  runtime:
+    name: Odoo runtime installation and update
+    if: ${{ inputs.runtime && inputs.edition == 'community' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U odoo"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: project
+      - uses: actions/checkout@v4
+        with:
+          repository: oskr1087/odoo-quality-ci
+          path: engine
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: odoo/odoo
+          ref: ${{ inputs.odoo_version }}
+          path: odoo
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libldap2-dev libsasl2-dev libpq-dev libxml2-dev libxslt1-dev
+          python -m pip install -r odoo/requirements.txt
+      - name: Install and optionally update modules
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGUSER: odoo
+          PGPASSWORD: odoo
+          DO_UPGRADE: ${{ inputs.upgrade }}
+        run: bash engine/scripts/runtime_smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-odoo-runtime-logs
+          path: runtime-logs/
+          if-no-files-found: warn
