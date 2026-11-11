@@ -45,11 +45,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p project/scripts project/audit-report
-          cp engine/scripts/{full_audit,architecture_audit,security_audit}.py project/scripts/
+          cp engine/scripts/{full_audit,architecture_audit,security_audit,runtime_guards}.py project/scripts/
           cd project
           python scripts/full_audit.py --output audit-report
           python scripts/architecture_audit.py --output audit-report/architecture.json
           python scripts/security_audit.py --output audit-report/security.json
+          python scripts/runtime_guards.py --root . --odoo-version '${{ inputs.odoo_version }}' --output audit-report/runtime-guards.json
       - name: Publish summaries
         if: always()
         shell: bash
