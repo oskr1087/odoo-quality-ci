@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: project
+          fetch-depth: 0
       - uses: actions/checkout@v4
         with:
           repository: oskr1087/odoo-quality-ci
@@ -45,12 +46,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p project/scripts project/audit-report
-          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,runtime_guards}.py project/scripts/
+          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards}.py project/scripts/
           cd project
           python scripts/full_audit.py --output audit-report
           python scripts/architecture_audit.py --output audit-report/architecture.json
           python scripts/security_audit.py --output audit-report/security.json
           python scripts/security_critical.py --root . --output audit-report/security-critical.json
+          python scripts/security_deep.py --root . --output audit-report/security-deep.json
+          if [ -n '${{ github.event.pull_request.base.sha }}' ]; then
+            python scripts/regression_audit.py --root . --base '${{ github.event.pull_request.base.sha }}' --output audit-report/regressions.json
+          else
+            echo 'Regression diff skipped: not a pull request event'
+          fi
           python scripts/runtime_guards.py --root . --odoo-version '${{ inputs.odoo_version }}' --output audit-report/runtime-guards.json
       - name: Publish summaries
         if: always()
