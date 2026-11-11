@@ -15,6 +15,9 @@ on:
       upgrade:
         type: boolean
         default: false
+      tests:
+        type: boolean
+        default: false
     secrets:
       ENTERPRISE_TOKEN:
         required: false
@@ -46,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p project/scripts project/audit-report
-          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards}.py project/scripts/
+          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,quality_reporting}.py project/scripts/
           cd project
           python scripts/full_audit.py --output audit-report
           python scripts/architecture_audit.py --output audit-report/architecture.json
@@ -59,11 +62,16 @@ jobs:
             echo 'Regression diff skipped: not a pull request event'
           fi
           python scripts/runtime_guards.py --root . --odoo-version '${{ inputs.odoo_version }}' --output audit-report/runtime-guards.json
+      - name: Build SARIF and QA scorecard
+        if: always()
+        run: |
+          cd project
+          python scripts/quality_reporting.py --directory audit-report
       - name: Publish summaries
         if: always()
         shell: bash
         run: |
-          for file in project/audit-report/{summary,architecture-summary,security-summary}.md; do
+          for file in project/audit-report/{summary,architecture-summary,security-summary,quality-summary}.md; do
             if [ -f "$file" ]; then cat "$file" >> "$GITHUB_STEP_SUMMARY"; fi
           done
       - uses: actions/upload-artifact@v4
@@ -122,6 +130,7 @@ jobs:
           PGUSER: odoo
           PGPASSWORD: odoo
           DO_UPGRADE: ${{ inputs.upgrade }}
+          DO_TESTS: ${{ inputs.tests }}
         run: bash engine/scripts/runtime_smoke.sh
       - uses: actions/upload-artifact@v4
         if: always()
