@@ -55,6 +55,18 @@ def audit(root, paths):
                 add("INVALID_XML", "error", rel, str(exc))
         elif path.name.endswith((".pyc", ".pyo")) or path.name in {".DS_Store"}:
             add("GENERATED_FILE_COMMITTED", "error", rel, "Generated file should not be committed")
+    pyfiles = [str(root / rel) for rel in paths if rel.endswith(".py") and (root / rel).is_file() and not SKIP.intersection(Path(rel).parts)]
+    if pyfiles:
+        for tool, command, rule in [
+            ("black", ["black", "--check", "--quiet", *pyfiles], "BLACK_FORMAT"),
+            ("ruff", ["ruff", "check", "--select", "E4,E7,E9,F,I", "--output-format", "concise", *pyfiles], "RUFF_STYLE"),
+        ]:
+            try:
+                result = subprocess.run(command, capture_output=True, text=True, check=False)
+                if result.returncode:
+                    add(rule, "review", "python", (result.stdout + result.stderr)[:3000] or f"{tool} failed")
+            except FileNotFoundError:
+                add("STYLE_TOOL_MISSING", "error", "python", f"{tool} not installed")
     return findings
 
 
