@@ -114,7 +114,7 @@ def scan_xml(path):
                    "Revisar impacto en vistas base y compatibilidad con upgrades.")
 
 
-def scan_manifest(path):
+def scan_manifest(path, odoo_version="20.0", edition="community"):
     name = relative(path)
     try:
         data = ast.literal_eval(path.read_text(encoding="utf-8"))
@@ -124,15 +124,15 @@ def scan_manifest(path):
         report(name, 1, "Manifiestos", "high", "MAN-PARSE", str(exc),
                "Corregir el manifiesto.")
         return
-    if not str(data.get("version", "")).startswith("20.0."):
+    if not str(data.get("version", "")).startswith(f"{odoo_version}."):
         report(name, 1, "Compatibilidad", "high", "MAN-VERSION",
-               "Versión distinta de Odoo 20.", "Revisar version en el manifiesto.")
+               f"Versión distinta de Odoo {odoo_version}.", "Revisar version en el manifiesto.")
     depends = data.get("depends", [])
     if not isinstance(depends, (list, tuple)):
         report(name, 1, "Manifiestos", "high", "MAN-DEPENDS",
                "El campo depends no es una lista.", "Corregir depends en el manifiesto.")
         return
-    for dep in sorted(ENTERPRISE.intersection(depends)):
+    for dep in sorted(ENTERPRISE.intersection(depends)) if edition == "community" else []:
         report(name, 1, "Compatibilidad", "high", "MAN-ENTERPRISE",
                f"Dependencia Enterprise: {dep}.", "Eliminar o sustituir la dependencia CE.")
 
@@ -169,7 +169,7 @@ def run_ruff():
                item["message"], "Revisar el diagnóstico de Ruff.", "ruff")
 
 
-def render(output, repo):
+def render(output, repo, odoo_version="20.0", edition="community"):
     unique = {(f["path"], f["line"], f["rule"], f["message"]): f for f in findings}
     items = sorted(unique.values(), key=lambda f: (
         SEVERITY[f["severity"]], f["path"], f["line"], f["rule"]))
@@ -180,7 +180,7 @@ def render(output, repo):
                          capture_output=True, text=True, check=True).stdout.strip()
     payload = {
         "generated_at": datetime.datetime.now(datetime.UTC).isoformat(),
-        "commit": sha, "files_scanned": len(files_seen),
+        "commit": sha, "repository": repo, "odoo_version": odoo_version, "edition": edition, "files_scanned": len(files_seen),
         "total": len(items), "severity": dict(counts),
         "categories": dict(categories), "modules": dict(modules),
         "findings": items,
@@ -207,12 +207,12 @@ def render(output, repo):
     stats = " · ".join(f"{key}: {counts[key]}" for key in SEVERITY)
     summary = "".join(f"<li>{html.escape(k)}: {v}</li>" for k, v in categories.most_common())
     page = f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
-<title>Auditoría Odoo 20 CE</title><style>
+<title>Auditoría {html.escape(repo)} · Odoo {html.escape(odoo_version)} {html.escape(edition)}</title><style>
 body{{font:15px system-ui;margin:2rem;color:#222}}table{{border-collapse:collapse;width:100%}}
 th,td{{border:1px solid #ddd;padding:9px;text-align:left;vertical-align:top}}
 th{{background:#f2f2f2}}tr:nth-child(even){{background:#fafafa}}
 input{{padding:10px;width:90%;max-width:500px;margin:1rem 0}}
-</style></head><body><h1>Auditoría Odoo 20 CE</h1>
+</style></head><body><h1>Auditoría {html.escape(repo)} · Odoo {html.escape(odoo_version)} {html.escape(edition)}</h1>
 <p>Commit: <code>{html.escape(sha)}</code></p>
 <h2>{len(items)} hallazgos · {len(files_seen)} archivos examinados</h2>
 <p>{html.escape(stats)}</p><h3>Categorías</h3><ul>{summary}</ul>
@@ -224,8 +224,8 @@ const q=this.value.toLowerCase();document.querySelectorAll('#findings tbody tr')
 r=>r.hidden=!r.textContent.toLowerCase().includes(q));}});</script></body></html>"""
     (output / "index.html").write_text(page, encoding="utf-8")
     markdown = [
-        "# Auditoría de calidad Odoo 20 CE", "",
-        f"Commit: \`{sha}\`", f"Archivos examinados: {len(files_seen)}",
+        f"# Auditoría de {repo} · Odoo {odoo_version} {edition}", "",
+        f"Commit: `{sha}`", f"Archivos examinados: {len(files_seen)}",
         f"Hallazgos: {len(items)}", "",
         "| Severidad | Cantidad |", "| --- | ---: |",
     ]
@@ -244,7 +244,9 @@ r=>r.hidden=!r.textContent.toLowerCase().includes(q));}});</script></body></html
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="audit-report")
-    parser.add_argument("--repo", default="oskr1087/l10n_ec_ce")
+    parser.add_argument("--repo", default="repositorio-local")
+    parser.add_argument("--odoo-version", default="20.0")
+    parser.add_argument("--edition", choices=("community", "enterprise"), default="community")
     args = parser.parse_args()
     modules = sorted(path for path in ROOT.iterdir()
                      if path.is_dir() and (path / "__manifest__.py").is_file())
@@ -260,13 +262,13 @@ def main():
             if path.suffix == ".py":
                 scan_python(path)
                 if path.name == "__manifest__.py":
-                    scan_manifest(path)
+                    scan_manifest(path, args.odoo_version, args.edition)
             elif path.suffix == ".xml":
                 scan_xml(path)
             elif path.suffix == ".csv":
                 scan_csv(path)
     run_ruff()
-    render(ROOT / args.output, args.repo)
+    render(ROOT / args.output, args.repo, args.odoo_version, args.edition)
 
 
 if __name__ == "__main__":

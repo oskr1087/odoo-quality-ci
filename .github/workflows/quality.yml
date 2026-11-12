@@ -58,7 +58,7 @@ jobs:
           mkdir -p project/scripts project/audit-report
           cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,performance_audit,quality_reporting,quality_gate,code_governance,style_audit,module_audit}.py project/scripts/
           cd project
-          python scripts/full_audit.py --output audit-report
+          python scripts/full_audit.py --output audit-report --repo "${{ github.repository }}" --odoo-version "${{ inputs.odoo_version }}" --edition "${{ inputs.edition }}"
           python scripts/architecture_audit.py --output audit-report/architecture.json
           python scripts/security_audit.py --output audit-report/security.json
           python scripts/security_critical.py --root . --output audit-report/security-critical.json
@@ -94,7 +94,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          for file in project/audit-report/{summary,architecture-summary,security-summary,quality-summary}.md; do
+          for file in project/audit-report/{project-summary,architecture-summary,security-summary,quality-summary}.md; do
             if [ -f "$file" ]; then cat "$file" >> "$GITHUB_STEP_SUMMARY"; fi
           done
       - uses: actions/upload-artifact@v4
