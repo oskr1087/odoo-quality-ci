@@ -1,0 +1,6 @@
+# Copy to .github/CODEOWNERS in the consumer repository and replace the owner.
+# GitHub branch rules must require code-owner reviews for enforcement.
+* @oskr1087
+.github/workflows/ @oskr1087
+**/__manifest__.py @oskr1087
+**/security/ @oskr1087

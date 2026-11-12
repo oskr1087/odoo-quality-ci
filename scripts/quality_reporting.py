@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 FILES = ("architecture.json", "security.json", "security-critical.json",
-         "security-deep.json", "runtime-guards.json", "regressions.json", "performance.json")
+         "security-deep.json", "runtime-guards.json", "regressions.json", "performance.json", "code-governance.json", "style.json", "modules.json")
 LEVELS = {"error": "error", "critical": "error", "warning": "warning",
           "review": "note", "info": "note"}
 
