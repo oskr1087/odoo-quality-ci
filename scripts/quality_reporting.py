@@ -59,7 +59,7 @@ def readable_summary(directory, counts):
     lines = [
         f"## Auditoría: {repo}",
         "",
-        f"**Proyecto:** \`{repo}\` · **Odoo:** {version} ({edition}) · **Commit:** \`{audit.get('commit', '?')[:12]}\`",
+        f"**Proyecto:** `{repo}` · **Odoo:** {version} ({edition}) · **Commit:** `{audit.get('commit', '?')[:12]}`",
         "",
         f"**Cobertura estática:** {audit.get('files_scanned', 0)} archivos · {len(items)} hallazgos del análisis general.",
         "",
@@ -74,7 +74,7 @@ def readable_summary(directory, counts):
         "| Módulo | Hallazgos |",
         "|---|---:|",
     ]
-    lines.extend(f"| \`{name}\` | {number} |" for name, number in
+    lines.extend(f"| `{name}` | {number} |" for name, number in
                  sorted(audit.get("modules", {}).items(), key=lambda x: -x[1])[:10])
     lines += ["", "### Observaciones prioritarias (revisión humana)", "",
               "| Gravedad | Módulo / archivo | Regla | Descripción |",
@@ -83,14 +83,14 @@ def readable_summary(directory, counts):
                                               x.get("path", "")))[:15]:
         location = f"{item.get('path', '?')}:{item.get('line', 1)}"
         message = str(item.get("message", "")).replace("|", "/").replace("\\n", " ")[:130]
-        lines.append(f"| {item.get('severity', '?')} | \`{location}\` | \`{item.get('rule', '?')}\` | {message} |")
+        lines.append(f"| {item.get('severity', '?')} | `{location}` | `{item.get('rule', '?')}` | {message} |")
     lines += [
         "", "### Diagnósticos de los controles especializados", "",
         f"- SARIF: {counts['error']} errores, {counts['warning']} advertencias y {counts['note']} notas.",
         "- Estas cifras provienen de herramientas distintas; **no deben sumarse** a los hallazgos del análisis general.",
         "- El resultado PASS significa que el umbral de bloqueo configurado se superó, **no que el código carezca de riesgos**.",
         "- Se trata de análisis estático: no sustituye instalación, actualización, pruebas funcionales ni revisión de permisos en ejecución.",
-        "", "El artifact \`shared-odoo-quality-report\` contiene JSON, HTML y SARIF para consultar cada archivo y recomendación.",
+        "", "El artifact `shared-odoo-quality-report` contiene JSON, HTML y SARIF para consultar cada archivo y recomendación.",
         ""
     ]
     return "\\n".join(lines)
