@@ -18,6 +18,9 @@ on:
       tests:
         type: boolean
         default: false
+      enforce_gate:
+        type: boolean
+        default: false
     secrets:
       ENTERPRISE_TOKEN:
         required: false
@@ -49,7 +52,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p project/scripts project/audit-report
-          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,performance_audit,quality_reporting}.py project/scripts/
+          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,performance_audit,quality_reporting,quality_gate}.py project/scripts/
           cd project
           python scripts/full_audit.py --output audit-report
           python scripts/architecture_audit.py --output audit-report/architecture.json
@@ -63,6 +66,16 @@ jobs:
             echo 'Regression diff skipped: not a pull request event'
           fi
           python scripts/runtime_guards.py --root . --odoo-version '${{ inputs.odoo_version }}' --output audit-report/runtime-guards.json
+      - name: Evaluate configured quality gate
+        if: ${{ inputs.enforce_gate }}
+        shell: bash
+        run: |
+          cd project
+          if [ -f .odoo-qa-policy.json ]; then
+            python scripts/quality_gate.py --directory audit-report --policy .odoo-qa-policy.json
+          else
+            python scripts/quality_gate.py --directory audit-report
+          fi
       - name: Build SARIF and QA scorecard
         if: always()
         run: |
