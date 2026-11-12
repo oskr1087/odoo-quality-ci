@@ -93,7 +93,7 @@ def readable_summary(directory, counts):
         "", "El artifact `shared-odoo-quality-report` contiene JSON, HTML y SARIF para consultar cada archivo y recomendación.",
         ""
     ]
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 def main():
     parser = argparse.ArgumentParser()
