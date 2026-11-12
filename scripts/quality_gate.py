@@ -12,6 +12,7 @@ REPORTS = {
     "regressions.json": "regressions",
     "performance.json": "performance",
     "code-governance.json": "architecture",
+    "style.json": "style",
 }
 SEVERITY = {"critical": 4, "error": 4, "high": 3, "warning": 2, "medium": 2,
             "review": 1, "info": 0, "note": 0}
