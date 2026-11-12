@@ -49,13 +49,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install audit dependencies
-        run: python -m pip install "ruff==0.14.3"
+        run: python -m pip install "ruff==0.14.3" "black==25.9.0"
       - name: Run shared checks against calling repository
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p project/scripts project/audit-report
-          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,performance_audit,quality_reporting,quality_gate,code_governance}.py project/scripts/
+          cp engine/scripts/{full_audit,architecture_audit,security_audit,security_critical,security_deep,regression_audit,runtime_guards,performance_audit,quality_reporting,quality_gate,code_governance,style_audit}.py project/scripts/
           cd project
           python scripts/full_audit.py --output audit-report
           python scripts/architecture_audit.py --output audit-report/architecture.json
@@ -64,9 +64,11 @@ jobs:
           python scripts/security_deep.py --root . --output audit-report/security-deep.json
           python scripts/performance_audit.py --root . --output audit-report/performance.json
           python scripts/code_governance.py --root . --output audit-report/code-governance.json
+          python scripts/style_audit.py --root . --output audit-report/style.json
           if [ -n '${{ github.event.pull_request.base.sha }}' ]; then
             python scripts/regression_audit.py --root . --base '${{ github.event.pull_request.base.sha }}' --output audit-report/regressions.json
             python scripts/code_governance.py --root . --base '${{ github.event.pull_request.base.sha }}' --output audit-report/code-governance.json
+            python scripts/style_audit.py --root . --base '${{ github.event.pull_request.base.sha }}' --output audit-report/style.json
           else
             echo 'Regression diff skipped: not a pull request event'
           fi
