@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: oskr1087/odoo-quality-ci
-          ref: ${{ github.workflow_sha }}
+          ref: 18.0
           path: engine
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -130,7 +130,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: oskr1087/odoo-quality-ci
-          ref: ${{ github.workflow_sha }}
+          ref: 18.0
           path: engine
           persist-credentials: false
       - uses: actions/checkout@v4
