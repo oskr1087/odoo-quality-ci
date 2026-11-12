@@ -13,7 +13,13 @@ echo "Installing: $joined"
 "${base[@]}" --init="$joined" 2>&1 | tee runtime-logs/install.log
 if [[ "${DO_TESTS:-false}" == "true" ]]; then
   echo "Running Odoo module tests: $joined"
-  "${base[@]}" --test-enable --update="$joined" 2>&1 | tee runtime-logs/tests.log
+  if [[ "${DO_COVERAGE:-false}" == "true" ]]; then
+    python -m coverage run --branch --source="$(pwd)/project" odoo/odoo-bin --addons-path="$addons" --database=quality_odoo --db_host="${PGHOST:-localhost}" --db_port="${PGPORT:-5432}" --db_user="${PGUSER:-odoo}" --db_password="${PGPASSWORD:-odoo}" --stop-after-init --without-demo=all --no-http --log-level=info --test-enable --update="$joined" 2>&1 | tee runtime-logs/tests.log
+    python -m coverage json -o runtime-logs/coverage.json
+    python -m coverage report | tee runtime-logs/coverage-summary.txt
+  else
+    "${base[@]}" --test-enable --update="$joined" 2>&1 | tee runtime-logs/tests.log
+  fi
 fi
 if [[ "${DO_UPGRADE:-false}" == "true" ]]; then
   echo "Updating: $joined"
