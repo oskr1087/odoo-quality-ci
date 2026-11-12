@@ -1,0 +1,19 @@
+{
+  "required_reports": [
+    "security-critical.json",
+    "security-deep.json",
+    "runtime-guards.json",
+    "code-governance.json",
+    "style.json",
+    "modules.json"
+  ],
+  "block_severities": [
+    "critical",
+    "error",
+    "high"
+  ],
+  "block_rules": [
+    "MODULE_STRUCTURE_REMOVAL"
+  ],
+  "max_findings": null
+}
